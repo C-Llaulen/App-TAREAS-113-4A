@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib.auth import authenticate
 
@@ -128,3 +128,63 @@ class TareasApiView(APIView):
             })
 
         return Response(datos, status.HTTP_200_OK)
+    
+
+    def post(self, request):
+
+        titulo = request.data.get('titulo')
+        descripcion = request.data.get('descripcion')
+        completada = request.data.get('completada', False)
+
+
+        #Validar que los campos obligatorios tengan datos
+
+        if not titulo or not descripcion:
+            return Response({
+                'error':'El titulo y la descripcion son obligatorias.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        #Crear y guardar la tarea en la BD
+        tarea = Tarea.objects.create(
+            titulo=titulo, 
+            descripcion=descripcion,
+            completada=completada
+        )
+       
+    #    Devolver la tarea creada
+
+        return Response({
+            'mensaje': 'Tarea creada correctamente',
+            'tarea':{
+                'id': tarea.id,
+                'titulo': tarea.titulo,
+                'descripcion':tarea.descripcion,
+                'completada': tarea.completada
+
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+class TareaDetalleApiView(APIView):
+
+    authentication_classes=[TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    #GET: Consultar una tarea por id
+    def get(self, request, id):
+        tarea = get_object_or_404(Tarea, id=id)
+
+        return Response({
+            'id': tarea.id,
+            'titulo': tarea.titulo,
+            'descripcion': tarea.descripcion,
+            'completada': tarea.completada
+        }, status=status.HTTP_200_OK)
+    
+
+    #DELETE: Eliminar una tarea
+    def delete(self, request, id):
+        tarea = get_object_or_404(Tarea, id=id)
+        tarea.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
